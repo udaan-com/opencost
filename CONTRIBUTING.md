@@ -6,6 +6,7 @@ Thanks for your help improving the OpenCost project! There are many ways to cont
 * contributing documentation 
 * joining the discussion on Slack or in [OpenCost community discussions](https://drive.google.com/drive/folders/1hXlcyFPePB7t3z6lyVzdxmdfrbzeT1Jz)
 * committing software via the workflow below
+* keep up with community events using our [Calendar](https://calendar.google.com/calendar/u/0/embed?src=c_c0f7q56e5eeod3j89bb320fvjg@group.calendar.google.com&ctz=America/Los_Angeles)
 
 ## Getting Help
 

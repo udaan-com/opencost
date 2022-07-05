@@ -18,26 +18,26 @@ import (
 
 const (
 	queryClusterCores = `sum(
-		avg(avg_over_time(kube_node_status_capacity_cpu_cores{clutser="udaan-k8s0"}[%s] %s)) by (node, %s) * avg(avg_over_time(node_cpu_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, %s) * 730 +
-		avg(avg_over_time(node_gpu_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, %s) * 730
+		avg(avg_over_time(kube_node_status_capacity_cpu_cores{cluster="udaan-k8s0"}[%s] %s)) by (node, %s) * avg(avg_over_time(node_cpu_hourly_cost{cluster="udaan-k8s0"}[%s] %s)) by (node, %s) * 730 +
+		avg(avg_over_time(node_gpu_hourly_cost{cluster="udaan-k8s0"}[%s] %s)) by (node, %s) * 730
 	  ) by (%s)`
 
 	queryClusterRAM = `sum(
-		avg(avg_over_time(kube_node_status_capacity_memory_bytes{clutser="udaan-k8s0"}[%s] %s)) by (node, %s) / 1024 / 1024 / 1024 * avg(avg_over_time(node_ram_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, %s) * 730
+		avg(avg_over_time(kube_node_status_capacity_memory_bytes{cluster="udaan-k8s0"}[%s] %s)) by (node, %s) / 1024 / 1024 / 1024 * avg(avg_over_time(node_ram_hourly_cost{cluster="udaan-k8s0"}[%s] %s)) by (node, %s) * 730
 	  ) by (%s)`
 
 	queryStorage = `sum(
-		avg(avg_over_time(pv_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (persistentvolume, %s) * 730
-		* avg(avg_over_time(kube_persistentvolume_capacity_bytes{clutser="udaan-k8s0"}[%s] %s)) by (persistentvolume, %s) / 1024 / 1024 / 1024
+		avg(avg_over_time(pv_hourly_cost{cluster="udaan-k8s0"}[%s] %s)) by (persistentvolume, %s) * 730
+		* avg(avg_over_time(kube_persistentvolume_capacity_bytes{cluster="udaan-k8s0"}[%s] %s)) by (persistentvolume, %s) / 1024 / 1024 / 1024
 	  ) by (%s) %s`
 
-	queryTotal = `sum(avg(node_total_hourly_cost{clutser="udaan-k8s0"}) by (node, %s)) * 730 +
+	queryTotal = `sum(avg(node_total_hourly_cost{cluster="udaan-k8s0"}) by (node, %s)) * 730 +
 	  sum(
-		avg(avg_over_time(pv_hourly_cost{clutser="udaan-k8s0"}[1h])) by (persistentvolume, %s) * 730
-		* avg(avg_over_time(kube_persistentvolume_capacity_bytes{clutser="udaan-k8s0"}[1h])) by (persistentvolume, %s) / 1024 / 1024 / 1024
+		avg(avg_over_time(pv_hourly_cost{cluster="udaan-k8s0"}[1h])) by (persistentvolume, %s) * 730
+		* avg(avg_over_time(kube_persistentvolume_capacity_bytes{cluster="udaan-k8s0"}[1h])) by (persistentvolume, %s) / 1024 / 1024 / 1024
 	  ) by (%s) %s`
 
-	queryNodes = `sum(avg(node_total_hourly_cost{clutser="udaan-k8s0"}) by (node, %s)) * 730 %s`
+	queryNodes = `sum(avg(node_total_hourly_cost{cluster="udaan-k8s0"}) by (node, %s)) * 730 %s`
 )
 
 const maxLocalDiskSize = 200 // AWS limits root disks to 100 Gi, and occasional metric errors in filesystem size should not contribute to large costs.
@@ -148,14 +148,14 @@ func ClusterDisks(client prometheus.Client, provider cloud.Provider, start, end 
 	costPerGBHr := 0.04 / 730.0
 
 	ctx := prom.NewNamedContext(client, prom.ClusterContextName)
-	queryPVCost := fmt.Sprintf(`avg(avg_over_time(pv_hourly_cost{clutser="udaan-k8s0"}[%s])) by (%s, persistentvolume,provider_id)`, durStr, env.GetPromClusterLabel())
-	queryPVSize := fmt.Sprintf(`avg(avg_over_time(kube_persistentvolume_capacity_bytes{clutser="udaan-k8s0"}[%s])) by (%s, persistentvolume)`, durStr, env.GetPromClusterLabel())
-	queryActiveMins := fmt.Sprintf(`count(pv_hourly_cost{clutser="udaan-k8s0"}) by (%s, persistentvolume)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
+	queryPVCost := fmt.Sprintf(`avg(avg_over_time(pv_hourly_cost{cluster="udaan-k8s0"}[%s])) by (%s, persistentvolume,provider_id)`, durStr, env.GetPromClusterLabel())
+	queryPVSize := fmt.Sprintf(`avg(avg_over_time(kube_persistentvolume_capacity_bytes{cluster="udaan-k8s0"}[%s])) by (%s, persistentvolume)`, durStr, env.GetPromClusterLabel())
+	queryActiveMins := fmt.Sprintf(`count(pv_hourly_cost{cluster="udaan-k8s0"}) by (%s, persistentvolume)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
 
-	queryLocalStorageCost := fmt.Sprintf(`sum_over_time(sum(container_fs_limit_bytes{device!="tmpfs", id="/", clutser="udaan-k8s0"}) by (instance, %s)[%s:%dm]) / 1024 / 1024 / 1024 * %f * %f`, env.GetPromClusterLabel(), durStr, minsPerResolution, hourlyToCumulative, costPerGBHr)
-	queryLocalStorageUsedCost := fmt.Sprintf(`sum_over_time(sum(container_fs_usage_bytes{device!="tmpfs", id="/", clutser="udaan-k8s0"}) by (instance, %s)[%s:%dm]) / 1024 / 1024 / 1024 * %f * %f`, env.GetPromClusterLabel(), durStr, minsPerResolution, hourlyToCumulative, costPerGBHr)
-	queryLocalStorageBytes := fmt.Sprintf(`avg_over_time(sum(container_fs_limit_bytes{device!="tmpfs", id="/", clutser="udaan-k8s0"}) by (instance, %s)[%s:%dm])`, env.GetPromClusterLabel(), durStr, minsPerResolution)
-	queryLocalActiveMins := fmt.Sprintf(`count(node_total_hourly_cost{clutser="udaan-k8s0"}) by (%s, node)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
+	queryLocalStorageCost := fmt.Sprintf(`sum_over_time(sum(container_fs_limit_bytes{device!="tmpfs", id="/", cluster="udaan-k8s0"}) by (instance, %s)[%s:%dm]) / 1024 / 1024 / 1024 * %f * %f`, env.GetPromClusterLabel(), durStr, minsPerResolution, hourlyToCumulative, costPerGBHr)
+	queryLocalStorageUsedCost := fmt.Sprintf(`sum_over_time(sum(container_fs_usage_bytes{device!="tmpfs", id="/", cluster="udaan-k8s0"}) by (instance, %s)[%s:%dm]) / 1024 / 1024 / 1024 * %f * %f`, env.GetPromClusterLabel(), durStr, minsPerResolution, hourlyToCumulative, costPerGBHr)
+	queryLocalStorageBytes := fmt.Sprintf(`avg_over_time(sum(container_fs_limit_bytes{device!="tmpfs", id="/", cluster="udaan-k8s0"}) by (instance, %s)[%s:%dm])`, env.GetPromClusterLabel(), durStr, minsPerResolution)
+	queryLocalActiveMins := fmt.Sprintf(`count(node_total_hourly_cost{cluster="udaan-k8s0"}) by (%s, node)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
 
 	resChPVCost := ctx.QueryAtTime(queryPVCost, t)
 	resChPVSize := ctx.QueryAtTime(queryPVSize, t)
@@ -548,8 +548,8 @@ func ClusterLoadBalancers(client prometheus.Client, start, end time.Time) (map[L
 
 	ctx := prom.NewNamedContext(client, prom.ClusterContextName)
 
-	queryLBCost := fmt.Sprintf(`avg(avg_over_time(kubecost_load_balancer_cost{clutser="udaan-k8s0"}[%s])) by (namespace, service_name, %s, ingress_ip)`, durStr, env.GetPromClusterLabel())
-	queryActiveMins := fmt.Sprintf(`avg(kubecost_load_balancer_cost{clutser="udaan-k8s0"}) by (namespace, service_name, %s, ingress_ip)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
+	queryLBCost := fmt.Sprintf(`avg(avg_over_time(kubecost_load_balancer_cost{cluster="udaan-k8s0"}[%s])) by (namespace, service_name, %s, ingress_ip)`, durStr, env.GetPromClusterLabel())
+	queryActiveMins := fmt.Sprintf(`avg(kubecost_load_balancer_cost{cluster="udaan-k8s0"}) by (namespace, service_name, %s, ingress_ip)[%s:%dm]`, env.GetPromClusterLabel(), durStr, minsPerResolution)
 
 	resChLBCost := ctx.QueryAtTime(queryLBCost, t)
 	resChActiveMins := ctx.QueryAtTime(queryActiveMins, t)
@@ -678,49 +678,49 @@ func (a *Accesses) ComputeClusterCosts(client prometheus.Client, provider cloud.
 	hourlyToCumulative := float64(minsPerResolution) * (1.0 / 60.0)
 
 	const fmtQueryDataCount = `
-		count_over_time(sum(kube_node_status_capacity_cpu_cores{clutser="udaan-k8s0"}) by (%s)[%s:%dm]%s) * %d
+		count_over_time(sum(kube_node_status_capacity_cpu_cores{cluster="udaan-k8s0"}) by (%s)[%s:%dm]%s) * %d
 	`
 
 	const fmtQueryTotalGPU = `
 		sum(
-			sum_over_time(node_gpu_hourly_cost{clutser="udaan-k8s0"}[%s:%dm]%s) * %f
+			sum_over_time(node_gpu_hourly_cost{cluster="udaan-k8s0"}[%s:%dm]%s) * %f
 		) by (%s)
 	`
 
 	const fmtQueryTotalCPU = `
 		sum(
-			sum_over_time(avg(kube_node_status_capacity_cpu_cores{clutser="udaan-k8s0"}) by (node, %s)[%s:%dm]%s) *
-			avg(avg_over_time(node_cpu_hourly_cost{clutser="udaan-k8s0"}[%s:%dm]%s)) by (node, %s) * %f
+			sum_over_time(avg(kube_node_status_capacity_cpu_cores{cluster="udaan-k8s0"}) by (node, %s)[%s:%dm]%s) *
+			avg(avg_over_time(node_cpu_hourly_cost{cluster="udaan-k8s0"}[%s:%dm]%s)) by (node, %s) * %f
 		) by (%s)
 	`
 
 	const fmtQueryTotalRAM = `
 		sum(
-			sum_over_time(avg(kube_node_status_capacity_memory_bytes{clutser="udaan-k8s0"}) by (node, %s)[%s:%dm]%s) / 1024 / 1024 / 1024 *
-			avg(avg_over_time(node_ram_hourly_cost{clutser="udaan-k8s0"}[%s:%dm]%s)) by (node, %s) * %f
+			sum_over_time(avg(kube_node_status_capacity_memory_bytes{cluster="udaan-k8s0"}) by (node, %s)[%s:%dm]%s) / 1024 / 1024 / 1024 *
+			avg(avg_over_time(node_ram_hourly_cost{cluster="udaan-k8s0"}[%s:%dm]%s)) by (node, %s) * %f
 		) by (%s)
 	`
 
 	const fmtQueryTotalStorage = `
 		sum(
-			sum_over_time(avg(kube_persistentvolume_capacity_bytes{clutser="udaan-k8s0"}) by (persistentvolume, %s)[%s:%dm]%s) / 1024 / 1024 / 1024 *
-			avg(avg_over_time(pv_hourly_cost{clutser="udaan-k8s0"}[%s:%dm]%s)) by (persistentvolume, %s) * %f
+			sum_over_time(avg(kube_persistentvolume_capacity_bytes{cluster="udaan-k8s0"}) by (persistentvolume, %s)[%s:%dm]%s) / 1024 / 1024 / 1024 *
+			avg(avg_over_time(pv_hourly_cost{cluster="udaan-k8s0"}[%s:%dm]%s)) by (persistentvolume, %s) * %f
 		) by (%s)
 	`
 
 	const fmtQueryCPUModePct = `
-		sum(rate(node_cpu_seconds_total{clutser="udaan-k8s0"}[%s]%s)) by (%s, mode) / ignoring(mode)
-		group_left sum(rate(node_cpu_seconds_total{clutser="udaan-k8s0"}[%s]%s)) by (%s)
+		sum(rate(node_cpu_seconds_total{cluster="udaan-k8s0"}[%s]%s)) by (%s, mode) / ignoring(mode)
+		group_left sum(rate(node_cpu_seconds_total{cluster="udaan-k8s0"}[%s]%s)) by (%s)
 	`
 
 	const fmtQueryRAMSystemPct = `
-		sum(sum_over_time(container_memory_usage_bytes{container_name!="",namespace="kube-system", clutser="udaan-k8s0"}[%s:%dm]%s)) by (%s)
-		/ sum(sum_over_time(kube_node_status_capacity_memory_bytes{clutser="udaan-k8s0"}[%s:%dm]%s)) by (%s)
+		sum(sum_over_time(container_memory_usage_bytes{container_name!="",namespace="kube-system", cluster="udaan-k8s0"}[%s:%dm]%s)) by (%s)
+		/ sum(sum_over_time(kube_node_status_capacity_memory_bytes{cluster="udaan-k8s0"}[%s:%dm]%s)) by (%s)
 	`
 
 	const fmtQueryRAMUserPct = `
-		sum(sum_over_time(kubecost_cluster_memory_working_set_bytes{clutser="udaan-k8s0"}[%s:%dm]%s)) by (%s)
-		/ sum(sum_over_time(kube_node_status_capacity_memory_bytes{clutser="udaan-k8s0"}[%s:%dm]%s)) by (%s)
+		sum(sum_over_time(kubecost_cluster_memory_working_set_bytes{cluster="udaan-k8s0"}[%s:%dm]%s)) by (%s)
+		/ sum(sum_over_time(kube_node_status_capacity_memory_bytes{cluster="udaan-k8s0"}[%s:%dm]%s)) by (%s)
 	`
 
 	// TODO niko/clustercost metric "kubelet_volume_stats_used_bytes" was deprecated in 1.12, then seems to have come back in 1.17

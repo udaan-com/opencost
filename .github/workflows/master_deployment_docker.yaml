@@ -36,7 +36,6 @@ jobs:
       # - name: push
       #   run: buildah push $IMAGE
 
-  # bring down the runner we'd created
   teardown:
     needs: [setup, main]
     if: always()

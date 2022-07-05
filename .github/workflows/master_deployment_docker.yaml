@@ -1,0 +1,47 @@
+name: image-opencost
+on:
+  push:
+    branches: [develop]
+    paths:
+      - .github/workflows/master_deployment_docker.yaml
+jobs:
+  # bring up an ephemeral runner
+  setup:
+    runs-on: [self-hosted, runner-controller]
+    outputs:
+      runner_name: ${{ steps.start_runner.outputs.runner_name }}
+    steps:
+      - id: start_runner
+        env:
+          WORKER_TYPE: go-1-17
+        run: start-runner
+
+  # this is where the main application specific steps should be run
+  main:
+    needs: [setup]
+    runs-on: ${{ needs.setup.outputs.runner_name }}
+    env:
+      IMAGE: udaan.azurecr.io/opencost:latest
+      BUILDAH_FORMAT: docker
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: clone
+        run: |
+                git clone https://github.com/udaan-com/opencost.git ./udaan-opencost
+                cd ./udaan-opencost
+      - name: build
+        run: |
+                buildah bud -t $IMAGE .
+      # - name: push
+      #   run: buildah push $IMAGE
+
+  # bring down the runner we'd created
+  teardown:
+    needs: [setup, main]
+    if: always()
+    runs-on: [self-hosted, runner-controller]
+    steps:
+      - name: teardown runner
+        run: stop-runner ${{ needs.setup.outputs.runner_name }}
+

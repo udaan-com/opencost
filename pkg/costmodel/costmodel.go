@@ -143,27 +143,27 @@ const (
 		label_replace(
 			label_replace(
 				avg(
-					count_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					count_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 					*
-					avg_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					avg_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 				) by (namespace,container,pod,node,%s) , "container_name","$1","container","(.+)"
 			), "pod_name","$1","pod","(.+)"
 		)
 	) by (namespace,container_name,pod_name,node,%s)`
 	queryRAMUsageStr = `sort_desc(
 		avg(
-			label_replace(count_over_time(container_memory_working_set_bytes{container_name!="",container_name!="POD", instance!="", clutser="udaan=k8s0"}[%s] %s), "node", "$1", "instance","(.+)")
+			label_replace(count_over_time(container_memory_working_set_bytes{container_name!="",container_name!="POD", instance!="", clutser="udaan-k8s0"}[%s] %s), "node", "$1", "instance","(.+)")
 			*
-			label_replace(avg_over_time(container_memory_working_set_bytes{container_name!="",container_name!="POD", instance!="", clutser="udaan=k8s0"}[%s] %s), "node", "$1", "instance","(.+)")
+			label_replace(avg_over_time(container_memory_working_set_bytes{container_name!="",container_name!="POD", instance!="", clutser="udaan-k8s0"}[%s] %s), "node", "$1", "instance","(.+)")
 		) by (namespace,container_name,pod_name,node,%s)
 	)`
 	queryCPURequestsStr = `avg(
 		label_replace(
 			label_replace(
 				avg(
-					count_over_time(kube_pod_container_resource_requests{resource="cpu", unit="core", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					count_over_time(kube_pod_container_resource_requests{resource="cpu", unit="core", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 					*
-					avg_over_time(kube_pod_container_resource_requests{resource="cpu", unit="core", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					avg_over_time(kube_pod_container_resource_requests{resource="cpu", unit="core", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 				) by (namespace,container,pod,node,%s) , "container_name","$1","container","(.+)"
 			), "pod_name","$1","pod","(.+)"
 		)
@@ -171,7 +171,7 @@ const (
 	queryCPUUsageStr = `avg(
 		label_replace(
 		rate(
-			container_cpu_usage_seconds_total{container_name!="",container_name!="POD",instance!="", clutser="udaan=k8s0"}[%s] %s
+			container_cpu_usage_seconds_total{container_name!="",container_name!="POD",instance!="", clutser="udaan-k8s0"}[%s] %s
 		) , "node", "$1", "instance", "(.+)"
 		)
 	) by (namespace,container_name,pod_name,node,%s)`
@@ -179,19 +179,19 @@ const (
 		label_replace(
 			label_replace(
 				avg(
-					count_over_time(kube_pod_container_resource_requests{resource="nvidia_com_gpu", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					count_over_time(kube_pod_container_resource_requests{resource="nvidia_com_gpu", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 					*
-					avg_over_time(kube_pod_container_resource_requests{resource="nvidia_com_gpu", container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s] %s)
+					avg_over_time(kube_pod_container_resource_requests{resource="nvidia_com_gpu", container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s] %s)
 					* %f
 				) by (namespace,container,pod,node,%s) , "container_name","$1","container","(.+)"
 			), "pod_name","$1","pod","(.+)"
 		)
 	) by (namespace,container_name,pod_name,node,%s)
-	* on (pod_name, namespace, %s) group_left(container) label_replace(avg(avg_over_time(kube_pod_status_phase{phase="Running", clutser="udaan=k8s0"}[%s] %s)) by (pod,namespace,%s), "pod_name","$1","pod","(.+)")`
-	queryPVRequestsStr = `avg(avg(kube_persistentvolumeclaim_info{volumename != "", clutser="udaan=k8s0"}) by (persistentvolumeclaim, storageclass, namespace, volumename, %s, kubernetes_node)
+	* on (pod_name, namespace, %s) group_left(container) label_replace(avg(avg_over_time(kube_pod_status_phase{phase="Running", clutser="udaan-k8s0"}[%s] %s)) by (pod,namespace,%s), "pod_name","$1","pod","(.+)")`
+	queryPVRequestsStr = `avg(avg(kube_persistentvolumeclaim_info{volumename != "", clutser="udaan-k8s0"}) by (persistentvolumeclaim, storageclass, namespace, volumename, %s, kubernetes_node)
 	*
 	on (persistentvolumeclaim, namespace, %s, kubernetes_node) group_right(storageclass, volumename)
-	sum(kube_persistentvolumeclaim_resource_requests_storage_bytes{clutser="udaan=k8s0"}) by (persistentvolumeclaim, namespace, %s, kubernetes_node, kubernetes_name)) by (persistentvolumeclaim, storageclass, namespace, %s, volumename, kubernetes_node)`
+	sum(kube_persistentvolumeclaim_resource_requests_storage_bytes{clutser="udaan-k8s0"}) by (persistentvolumeclaim, namespace, %s, kubernetes_node, kubernetes_name)) by (persistentvolumeclaim, storageclass, namespace, %s, volumename, kubernetes_node)`
 	// queryRAMAllocationByteHours yields the total byte-hour RAM allocation over the given
 	// window, aggregated by container.
 	//  [line 3]  sum_over_time(each byte) = [byte*scrape] by metric
@@ -201,7 +201,7 @@ const (
 	queryRAMAllocationByteHours = `
 		label_replace(label_replace(
 			sum(
-				sum_over_time(container_memory_allocation_bytes{container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s])
+				sum_over_time(container_memory_allocation_bytes{container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s])
 			) by (namespace,container,pod,node,%s) * %f / 60 / 60
 		, "container_name","$1","container","(.+)"), "pod_name","$1","pod","(.+)")`
 	// queryCPUAllocationVCPUHours yields the total VCPU-hour CPU allocation over the given
@@ -213,26 +213,26 @@ const (
 	queryCPUAllocationVCPUHours = `
 		label_replace(label_replace(
 			sum(
-				sum_over_time(container_cpu_allocation{container!="",container!="POD", node!="", clutser="udaan=k8s0"}[%s])
+				sum_over_time(container_cpu_allocation{container!="",container!="POD", node!="", clutser="udaan-k8s0"}[%s])
 			) by (namespace,container,pod,node,%s) * %f / 60 / 60
 		, "container_name","$1","container","(.+)"), "pod_name","$1","pod","(.+)")`
 	// queryPVCAllocationFmt yields the total byte-hour PVC allocation over the given window.
 	// sum_over_time(each byte) = [byte*scrape] by metric *(scalar(avg(prometheus_target_interval_length_seconds)) = [seconds/scrape] / 60 / 60 =  [hours/scrape] by pod
-	queryPVCAllocationFmt     = `sum(sum_over_time(pod_pvc_allocation{clutser="udaan=k8s0"}[%s])) by (%s, namespace, pod, persistentvolume, persistentvolumeclaim) * %f/60/60`
-	queryPVHourlyCostFmt      = `avg_over_time(pv_hourly_cost{clutser="udaan=k8s0"}[%s])`
-	queryNSLabels             = `avg_over_time(kube_namespace_labels{clutser="udaan=k8s0"}[%s])`
-	queryPodLabels            = `avg_over_time(kube_pod_labels{clutser="udaan=k8s0"}[%s])`
-	queryNSAnnotations        = `avg_over_time(kube_namespace_annotations{clutser="udaan=k8s0"}[%s])`
-	queryPodAnnotations       = `avg_over_time(kube_pod_annotations{clutser="udaan=k8s0"}[%s])`
-	queryDeploymentLabels     = `avg_over_time(deployment_match_labels{clutser="udaan=k8s0"}[%s])`
-	queryStatefulsetLabels    = `avg_over_time(statefulSet_match_labels{clutser="udaan=k8s0"}[%s])`
-	queryPodDaemonsets        = `sum(kube_pod_owner{owner_kind="DaemonSet", clutser="udaan=k8s0"}) by (namespace,pod,owner_name,%s)`
-	queryPodJobs              = `sum(kube_pod_owner{owner_kind="Job", clutser="udaan=k8s0"}) by (namespace,pod,owner_name,%s)`
-	queryServiceLabels        = `avg_over_time(service_selector_labels{clutser="udaan=k8s0"}[%s])`
-	queryZoneNetworkUsage     = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="false", sameZone="false", sameRegion="true", clutser="udaan=k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
-	queryRegionNetworkUsage   = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="false", sameZone="false", sameRegion="false", clutser="udaan=k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
-	queryInternetNetworkUsage = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="true", clutser="udaan=k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
-	normalizationStr          = `max(count_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", clutser="udaan=k8s0"}[%s] %s))`
+	queryPVCAllocationFmt     = `sum(sum_over_time(pod_pvc_allocation{clutser="udaan-k8s0"}[%s])) by (%s, namespace, pod, persistentvolume, persistentvolumeclaim) * %f/60/60`
+	queryPVHourlyCostFmt      = `avg_over_time(pv_hourly_cost{clutser="udaan-k8s0"}[%s])`
+	queryNSLabels             = `avg_over_time(kube_namespace_labels{clutser="udaan-k8s0"}[%s])`
+	queryPodLabels            = `avg_over_time(kube_pod_labels{clutser="udaan-k8s0"}[%s])`
+	queryNSAnnotations        = `avg_over_time(kube_namespace_annotations{clutser="udaan-k8s0"}[%s])`
+	queryPodAnnotations       = `avg_over_time(kube_pod_annotations{clutser="udaan-k8s0"}[%s])`
+	queryDeploymentLabels     = `avg_over_time(deployment_match_labels{clutser="udaan-k8s0"}[%s])`
+	queryStatefulsetLabels    = `avg_over_time(statefulSet_match_labels{clutser="udaan-k8s0"}[%s])`
+	queryPodDaemonsets        = `sum(kube_pod_owner{owner_kind="DaemonSet", clutser="udaan-k8s0"}) by (namespace,pod,owner_name,%s)`
+	queryPodJobs              = `sum(kube_pod_owner{owner_kind="Job", clutser="udaan-k8s0"}) by (namespace,pod,owner_name,%s)`
+	queryServiceLabels        = `avg_over_time(service_selector_labels{clutser="udaan-k8s0"}[%s])`
+	queryZoneNetworkUsage     = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="false", sameZone="false", sameRegion="true", clutser="udaan-k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
+	queryRegionNetworkUsage   = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="false", sameZone="false", sameRegion="false", clutser="udaan-k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
+	queryInternetNetworkUsage = `sum(increase(kubecost_pod_network_egress_bytes_total{internet="true", clutser="udaan-k8s0"}[%s] %s)) by (namespace,pod_name,%s) / 1024 / 1024 / 1024`
+	normalizationStr          = `max(count_over_time(kube_pod_container_resource_requests{resource="memory", unit="byte", clutser="udaan-k8s0"}[%s] %s))`
 )
 
 func (cm *CostModel) ComputeCostData(cli prometheusClient.Client, cp costAnalyzerCloud.Provider, window string, offset string, filterNamespace string) (map[string]*CostData, error) {
@@ -756,9 +756,9 @@ func findDeletedNodeInfo(cli prometheusClient.Client, missingNodes map[string]*c
 			offsetStr = fmt.Sprintf("offset %s", offset)
 		}
 
-		queryHistoricalCPUCost := fmt.Sprintf(`avg(avg_over_time(node_cpu_hourly_cost{clutser="udaan=k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
-		queryHistoricalRAMCost := fmt.Sprintf(`avg(avg_over_time(node_ram_hourly_cost{clutser="udaan=k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
-		queryHistoricalGPUCost := fmt.Sprintf(`avg(avg_over_time(node_gpu_hourly_cost{clutser="udaan=k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
+		queryHistoricalCPUCost := fmt.Sprintf(`avg(avg_over_time(node_cpu_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
+		queryHistoricalRAMCost := fmt.Sprintf(`avg(avg_over_time(node_ram_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
+		queryHistoricalGPUCost := fmt.Sprintf(`avg(avg_over_time(node_gpu_hourly_cost{clutser="udaan-k8s0"}[%s] %s)) by (node, instance, %s)`, window, offsetStr, env.GetPromClusterLabel())
 
 		ctx := prom.NewNamedContext(cli, prom.ComputeCostDataContextName)
 		cpuCostResCh := ctx.Query(queryHistoricalCPUCost)
